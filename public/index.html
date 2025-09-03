@@ -422,7 +422,9 @@
                     console.log('✅ Server connection successful:', data);
                     
                     // Update status display
-                    if (data.mcp_status === 'REAL_MCP_CONNECTED') {
+                    if (data.mcp_status === 'FIXED_MCP_ACTIVE') {
+                        statusDiv.innerHTML = `Status: <strong style="color: #00ff88;">FIXED VERSION ACTIVE</strong> | All Apps Working | Server: v3.0`;
+                    } else if (data.mcp_status === 'REAL_MCP_CONNECTED') {
                         statusDiv.innerHTML = `Status: <strong style="color: #00ff88;">REAL MCP ACTIVE</strong> | Mode: ${data.mcp_status} | Server: v2.0`;
                     } else {
                         statusDiv.innerHTML = `Status: Connected | MCP Bridge: ${data.mcp_status} | Server: localhost:3001`;
