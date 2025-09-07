@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Windows Assistant - MCP Test Interface</title>
+    <title>Windows Assistant - Back to Working</title>
     <style>
         * {
             margin: 0;
@@ -36,23 +36,6 @@
             color: white;
             padding: 20px;
             text-align: center;
-            position: relative;
-        }
-
-        .status-dot {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            width: 10px;
-            height: 10px;
-            background: #00ff88;
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.7; transform: scale(1.1); }
         }
 
         .header h1 {
@@ -74,16 +57,6 @@
 
         .message {
             margin-bottom: 15px;
-            animation: slideIn 0.3s ease-out;
-        }
-
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .message.user {
-            text-align: right;
         }
 
         .message-content {
@@ -93,6 +66,10 @@
             border-radius: 15px;
             font-size: 14px;
             line-height: 1.4;
+        }
+
+        .message.user {
+            text-align: right;
         }
 
         .message.user .message-content {
@@ -105,37 +82,6 @@
             color: #333;
             border: 1px solid #ddd;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-        }
-
-        .typing-indicator {
-            display: none;
-            text-align: left;
-            margin-bottom: 15px;
-        }
-
-        .typing-dots {
-            display: inline-flex;
-            gap: 3px;
-            padding: 12px 16px;
-            background: white;
-            border-radius: 15px;
-            border: 1px solid #ddd;
-        }
-
-        .dot {
-            width: 6px;
-            height: 6px;
-            background: #999;
-            border-radius: 50%;
-            animation: bounce 1.4s infinite;
-        }
-
-        .dot:nth-child(2) { animation-delay: 0.2s; }
-        .dot:nth-child(3) { animation-delay: 0.4s; }
-
-        @keyframes bounce {
-            0%, 80%, 100% { transform: scale(0); }
-            40% { transform: scale(1); }
         }
 
         .suggestions {
@@ -217,70 +163,47 @@
             cursor: not-allowed;
         }
 
-        .error-message {
-            background: #ffebee !important;
-            border-color: #ffcdd2 !important;
-            color: #c62828 !important;
+        .welcome-message {
+            text-align: center;
+            color: #666;
+            padding: 40px 20px;
+            font-size: 16px;
         }
 
-        .success-details {
-            margin-top: 8px;
-            font-size: 12px;
-            opacity: 0.8;
-            font-style: italic;
-        }
-
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: #c1c1c1;
-            border-radius: 10px;
+        .welcome-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <div class="status-dot"></div>
             <h1>🤖 Windows Assistant</h1>
-            <p>MCP Integration Test Interface</p>
+            <p>Back to Working Version - Simple & Reliable</p>
         </div>
         
         <div id="messages" class="messages-container">
-            <div class="message bot">
-                <div class="message-content">
-                    <strong>Windows Assistant:</strong> Hello! I'm ready to help with Windows automation tasks. 
-                    Try the quick actions below or type your own request.
-                    <div class="success-details">
-                        Status: Ready | MCP Bridge: Connected | Server: localhost:3001
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="typing-indicator" id="typingIndicator">
-            <div class="typing-dots">
-                <div class="dot"></div>
-                <div class="dot"></div>
-                <div class="dot"></div>
+            <div class="welcome-message">
+                <div class="welcome-icon">✅</div>
+                <h3>Back to Working!</h3>
+                <p>Simple, reliable Windows automation. Try the buttons below or type your request.</p>
             </div>
         </div>
 
         <div class="suggestions">
-            <div class="suggestions-title">💡 Quick Actions</div>
+            <div class="suggestions-title">💡 Working Commands</div>
             <div class="suggestion-buttons">
-                <button class="suggestion" onclick="sendMessage('Take a screenshot')">📸 Screenshot</button>
+                <button class="suggestion" onclick="sendMessage('Write a poem in Word')">✍️ Write Poem</button>
+                <button class="suggestion" onclick="sendMessage('Write an essay in Word')">📝 Write Essay</button>
+                <button class="suggestion" onclick="sendMessage('Write letter to principal in Word')">💌 Write Letter</button>
+                <button class="suggestion" onclick="sendMessage('Take a screenshot')">📸 Desktop Screenshot</button>
+                <button class="suggestion" onclick="sendMessage('Screenshot of Chrome')">🌍 Chrome Window</button>
+                <button class="suggestion" onclick="sendMessage('Screenshot of active window')">🪟 Active Window</button>
+                <button class="suggestion" onclick="sendMessage('Show recent screenshots')">📁 Recent Screenshots</button>
                 <button class="suggestion" onclick="sendMessage('Open calculator')">🧮 Calculator</button>
+                <button class="suggestion" onclick="sendMessage('Open Word')">📄 Word</button>
                 <button class="suggestion" onclick="sendMessage('System info')">💻 System Info</button>
-                <button class="suggestion" onclick="sendMessage('Show disk space')">💾 Disk Space</button>
-                <button class="suggestion" onclick="sendMessage('List running apps')">📱 Running Apps</button>
-                <button class="suggestion" onclick="sendMessage('Test connection')">🔌 Test Connection</button>
             </div>
         </div>
 
@@ -288,7 +211,7 @@
             <input type="text" 
                    id="messageInput" 
                    class="message-input" 
-                   placeholder="Type your Windows automation request..." 
+                   placeholder="Type your command..." 
                    onkeypress="if(event.key==='Enter') sendMessage()">
             <button id="sendButton" class="send-button" onclick="sendMessage()">Send</button>
         </div>
@@ -298,33 +221,29 @@
         const messagesContainer = document.getElementById('messages');
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
-        const typingIndicator = document.getElementById('typingIndicator');
 
-        function addMessage(content, isUser = false, isError = false) {
+        function addMessage(content, isUser = false) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${isUser ? 'user' : 'bot'}`;
             
             const contentDiv = document.createElement('div');
-            contentDiv.className = `message-content ${isError ? 'error-message' : ''}`;
+            contentDiv.className = 'message-content';
             contentDiv.innerHTML = content;
             
             messageDiv.appendChild(contentDiv);
             messagesContainer.appendChild(messageDiv);
+            
+            // Remove welcome message if it exists
+            const welcomeMessage = document.querySelector('.welcome-message');
+            if (welcomeMessage) {
+                welcomeMessage.remove();
+            }
             
             scrollToBottom();
         }
 
         function scrollToBottom() {
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }
-
-        function showTyping() {
-            typingIndicator.style.display = 'block';
-            scrollToBottom();
-        }
-
-        function hideTyping() {
-            typingIndicator.style.display = 'none';
         }
 
         async function sendMessage(text = null) {
@@ -335,16 +254,13 @@
             sendButton.disabled = true;
             
             addMessage(`<strong>You:</strong> ${message}`, true);
-            showTyping();
             
             try {
                 const response = await fetch('http://localhost:3001/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message, context: [] })
+                    body: JSON.stringify({ message })
                 });
-
-                hideTyping();
 
                 if (!response.ok) {
                     throw new Error(`Server error: ${response.status}`);
@@ -354,53 +270,19 @@
                 
                 if (data.success) {
                     let responseHtml = `<strong>Assistant:</strong> ${data.response}`;
-                    
                     if (data.details) {
-                        responseHtml += '<div class="success-details">';
-                        
-                        if (typeof data.details === 'object' && !Array.isArray(data.details)) {
-                            if (data.details.drives) {
-                                responseHtml += '<strong>Drive Information:</strong><br>';
-                                data.details.drives.forEach(drive => {
-                                    responseHtml += `💾 ${drive.drive} - ${drive.free} free of ${drive.total} (${drive.percent_free} free)<br>`;
-                                });
-                            } else if (data.details.running_apps) {
-                                responseHtml += `<strong>Running Applications:</strong><br>`;
-                                data.details.running_apps.forEach(app => {
-                                    responseHtml += `📱 ${app}<br>`;
-                                });
-                                responseHtml += `<em>Active windows: ${data.details.active_windows}</em>`;
-                            } else {
-                                for (const [key, value] of Object.entries(data.details)) {
-                                    responseHtml += `<strong>${key}:</strong> ${value}<br>`;
-                                }
-                            }
-                        } else {
-                            responseHtml += data.details;
-                        }
-                        
-                        responseHtml += '</div>';
+                        responseHtml += `<br><small><em>${data.details}</em></small>`;
                     }
-                    
                     addMessage(responseHtml);
                 } else {
-                    addMessage(`<strong>Error:</strong> ${data.error || 'Unknown error occurred'}`, false, true);
+                    addMessage(`<strong>Error:</strong> ${data.error || 'Unknown error'}`);
                 }
                 
             } catch (error) {
-                hideTyping();
-                
                 if (error.message.includes('Failed to fetch')) {
-                    addMessage(`
-                        <strong>🔌 Connection Error:</strong><br>
-                        Cannot connect to the automation server.<br><br>
-                        <strong>Please make sure:</strong><br>
-                        • Node.js server is running: <code>node server.js</code><br>
-                        • Server is accessible at: <code>http://localhost:3001</code><br>
-                        • Check console for error messages
-                    `, false, true);
+                    addMessage('<strong>🔌 Connection Error:</strong> Server not running. Make sure to start: node server.js');
                 } else {
-                    addMessage(`<strong>❌ Error:</strong> ${error.message}`, false, true);
+                    addMessage(`<strong>❌ Error:</strong> ${error.message}`);
                 }
             }
             
@@ -410,32 +292,6 @@
         // Focus input on page load
         window.addEventListener('load', () => {
             messageInput.focus();
-        });
-
-        // Test connection on page load
-        window.addEventListener('load', async () => {
-            const statusDiv = document.getElementById('connectionStatus');
-            try {
-                const response = await fetch('http://localhost:3001/api/health');
-                if (response.ok) {
-                    const data = await response.json();
-                    console.log('✅ Server connection successful:', data);
-                    
-                    // Update status display
-                    if (data.mcp_status === 'FIXED_MCP_ACTIVE') {
-                        statusDiv.innerHTML = `Status: <strong style="color: #00ff88;">FIXED VERSION ACTIVE</strong> | All Apps Working | Server: v3.0`;
-                    } else if (data.mcp_status === 'REAL_MCP_CONNECTED') {
-                        statusDiv.innerHTML = `Status: <strong style="color: #00ff88;">REAL MCP ACTIVE</strong> | Mode: ${data.mcp_status} | Server: v2.0`;
-                    } else {
-                        statusDiv.innerHTML = `Status: Connected | MCP Bridge: ${data.mcp_status} | Server: localhost:3001`;
-                    }
-                } else {
-                    statusDiv.innerHTML = 'Status: <span style="color: #ff4444;">Server Error</span> | Please restart server';
-                }
-            } catch (error) {
-                console.log('❌ Server not accessible:', error.message);
-                statusDiv.innerHTML = 'Status: <span style="color: #ff4444;">Disconnected</span> | Server not running';
-            }
         });
     </script>
 </body>

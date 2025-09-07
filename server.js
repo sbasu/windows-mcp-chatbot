@@ -1,4 +1,4 @@
-// server.js - SUPER SIMPLE VERSION WITH WORKING SCREENSHOTS
+// server.js - BACK TO WORKING VERSION + SMALL FIXES
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -45,15 +45,15 @@ app.post('/api/chat', async (req, res) => {
     }
 });
 
-// Process messages
+// Process messages - BACK TO SIMPLE VERSION
 async function processUserMessage(message) {
     const msg = message.toLowerCase();
     
     try {
-        // Screenshot
+        // Screenshot - SIMPLE VERSION THAT WORKED
         if (msg.includes('screenshot') || msg.includes('capture')) {
             console.log('📸 Taking screenshot...');
-            const result = await takeSimpleScreenshot();
+            const result = await takeWorkingScreenshot();
             return {
                 message: '📸 Screenshot taken!',
                 details: result.success ? result.message : `Error: ${result.error}`
@@ -70,7 +70,7 @@ async function processUserMessage(message) {
             };
         }
         
-        // App launching
+        // App launching - SIMPLE VERSION
         if (msg.includes('open') || msg.includes('launch') || msg.includes('start')) {
             const appName = extractAppName(message);
             console.log(`🚀 Launching: ${appName}`);
@@ -93,7 +93,7 @@ async function processUserMessage(message) {
         
         // Default
         return {
-            message: '🤖 Super Simple System Ready!',
+            message: '🤖 Simple System Ready!',
             details: 'Commands: screenshot, open calculator, system info, list screenshots'
         };
         
@@ -106,19 +106,22 @@ async function processUserMessage(message) {
     }
 }
 
-// SUPER SIMPLE screenshot function that WILL work
-function takeSimpleScreenshot() {
+// ENHANCED screenshot that supports windows but keeps desktop working
+function takeSmartScreenshot(type = 'desktop', windowApp = '') {
     return new Promise((resolve) => {
         const timestamp = new Date().toISOString()
             .replace(/T/, '_')
             .replace(/\..+/, '')
             .replace(/:/g, '-');
         
-        const filename = `Screenshot_${timestamp}.png`;
+        const filename = `Screenshot_${type === 'desktop' ? 'Desktop' : type === 'active' ? 'ActiveWindow' : windowApp}_${timestamp}.png`;
         const filepath = path.join(DESKTOP_PATH, filename);
         
-        // Create a temporary PowerShell script file to avoid command line escaping issues
-        const scriptContent = `
+        let scriptContent = '';
+        
+        if (type === 'desktop') {
+            // Use the SAME working desktop script
+            scriptContent = `
 Add-Type -AssemblyName System.Windows.Forms,System.Drawing
 $screen = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
 $bitmap = New-Object System.Drawing.Bitmap($screen.Width, $screen.Height)
@@ -127,16 +130,108 @@ $graphics.CopyFromScreen(0, 0, 0, 0, $bitmap.Size)
 $bitmap.Save("${filepath.replace(/\\/g, '\\\\')}")
 $graphics.Dispose()
 $bitmap.Dispose()
-Write-Host "Screenshot saved: ${filepath}"
-Start-Process explorer.exe -ArgumentList "${DESKTOP_PATH.replace(/\\/g, '\\\\')}"
+Write-Host "Desktop screenshot saved: ${filepath}"
 `;
+        } else if (type === 'active') {
+            // Active window screenshot
+            scriptContent = `
+Add-Type -AssemblyName System.Windows.Forms,System.Drawing
+Add-Type @'
+using System;
+using System.Runtime.InteropServices;
+public class Win32 {
+    [DllImport("user32.dll")]
+    public static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")]
+    public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+    public struct RECT { public int Left, Top, Right, Bottom; }
+}
+'@
+
+try {
+    $hwnd = [Win32]::GetForegroundWindow()
+    $rect = New-Object Win32+RECT
+    [Win32]::GetWindowRect($hwnd, [ref]$rect) | Out-Null
+    $width = $rect.Right - $rect.Left
+    $height = $rect.Bottom - $rect.Top
+    
+    if ($width -gt 0 -and $height -gt 0) {
+        $bitmap = New-Object System.Drawing.Bitmap($width, $height)
+        $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+        $graphics.CopyFromScreen($rect.Left, $rect.Top, 0, 0, [System.Drawing.Size]::new($width, $height))
+        $bitmap.Save("${filepath.replace(/\\/g, '\\\\')}")
+        $graphics.Dispose()
+        $bitmap.Dispose()
+        Write-Host "Active window screenshot saved: ${filepath}"
+    } else {
+        Write-Error "Could not capture active window - invalid dimensions"
+    }
+} catch {
+    Write-Error "Error capturing active window: $($_.Exception.Message)"
+}
+`;
+        } else if (type === 'window' && windowApp) {
+            // Specific application window
+            scriptContent = `
+Add-Type -AssemblyName System.Windows.Forms,System.Drawing
+Add-Type @'
+using System;
+using System.Runtime.InteropServices;
+public class Win32 {
+    [DllImport("user32.dll")]
+    public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+    [DllImport("user32.dll")]
+    public static extern bool SetForegroundWindow(IntPtr hWnd);
+    [DllImport("user32.dll")]
+    public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+    public struct RECT { public int Left, Top, Right, Bottom; }
+}
+'@
+
+try {
+    $processes = Get-Process -Name "${windowApp}" -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 }
+    
+    if ($processes) {
+        $process = $processes[0]
+        Write-Host "Found ${windowApp} process with window"
+        
+        # Bring window to front
+        [Win32]::ShowWindow($process.MainWindowHandle, 9) | Out-Null
+        [Win32]::SetForegroundWindow($process.MainWindowHandle) | Out-Null
+        Start-Sleep -Milliseconds 800
+        
+        $rect = New-Object Win32+RECT
+        [Win32]::GetWindowRect($process.MainWindowHandle, [ref]$rect) | Out-Null
+        
+        $width = $rect.Right - $rect.Left
+        $height = $rect.Bottom - $rect.Top
+        
+        if ($width -gt 50 -and $height -gt 50) {
+            $bitmap = New-Object System.Drawing.Bitmap($width, $height)
+            $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+            $graphics.CopyFromScreen($rect.Left, $rect.Top, 0, 0, [System.Drawing.Size]::new($width, $height))
+            $bitmap.Save("${filepath.replace(/\\/g, '\\\\')}")
+            $graphics.Dispose()
+            $bitmap.Dispose()
+            Write-Host "${windowApp} window screenshot saved: ${filepath}"
+        } else {
+            Write-Error "Window dimensions too small: $width x $height"
+        }
+    } else {
+        Write-Error "${windowApp} is not running or has no visible window. Please open ${windowApp} first."
+    }
+} catch {
+    Write-Error "Error capturing ${windowApp} window: $($_.Exception.Message)"
+}
+`;
+        }
         
         // Write script to temp file
         const tempScript = path.join(os.tmpdir(), `screenshot_${Date.now()}.ps1`);
         require('fs').writeFileSync(tempScript, scriptContent);
         
-        console.log(`🔧 Taking screenshot using temp script: ${tempScript}`);
-        console.log(`📁 Will save to: ${filepath}`);
+        console.log(`🔧 Taking ${type} screenshot...`);
+        if (type === 'window') console.log(`🎯 Target app: ${windowApp}`);
         
         // Execute PowerShell script
         exec(`powershell -ExecutionPolicy Bypass -File "${tempScript}"`, (error, stdout, stderr) => {
@@ -147,17 +242,16 @@ Start-Process explorer.exe -ArgumentList "${DESKTOP_PATH.replace(/\\/g, '\\\\')}
                 console.log('Could not delete temp script:', e.message);
             }
             
-            if (error) {
-                console.error('❌ Screenshot error:', error.message);
-                console.error('❌ stderr:', stderr);
+            if (error || stderr) {
+                console.error('❌ Screenshot error:', error?.message || stderr);
                 resolve({ 
                     success: false, 
-                    error: error.message,
-                    message: 'Failed to take screenshot'
+                    error: stderr || error?.message || 'Unknown error',
+                    message: `Failed to take ${type} screenshot`
                 });
             } else {
                 console.log('✅ Screenshot success!');
-                console.log('📤 stdout:', stdout);
+                console.log('📤 Output:', stdout);
                 
                 // Check if file was actually created
                 const fs = require('fs');
@@ -165,15 +259,15 @@ Start-Process explorer.exe -ArgumentList "${DESKTOP_PATH.replace(/\\/g, '\\\\')}
                     const stats = fs.statSync(filepath);
                     resolve({ 
                         success: true, 
-                        message: `✅ Saved: ${filename}\n📁 Location: Desktop\n📊 Size: ${Math.round(stats.size/1024)} KB\n🗂️ Desktop opened`,
+                        message: `✅ Saved: ${filename}\n📁 Location: Desktop\n📊 Size: ${Math.round(stats.size/1024)} KB`,
                         filename: filename,
                         filepath: filepath
                     });
                 } else {
                     resolve({ 
                         success: false, 
-                        error: 'File was not created',
-                        message: 'Screenshot command ran but file not found'
+                        error: 'Screenshot file was not created',
+                        message: 'Command completed but file not found'
                     });
                 }
             }
@@ -181,7 +275,7 @@ Start-Process explorer.exe -ArgumentList "${DESKTOP_PATH.replace(/\\/g, '\\\\')}
     });
 }
 
-// List recent screenshots
+// List recent screenshots - SAME AS BEFORE
 function listRecentScreenshots() {
     return new Promise((resolve) => {
         const command = `powershell -Command "Get-ChildItem '${DESKTOP_PATH}\\Screenshot*.png' | Sort-Object LastWriteTime -Descending | Select-Object -First 5 | ForEach-Object { Write-Host ($_.Name + ' - ' + $_.LastWriteTime.ToString('MM/dd HH:mm') + ' (' + [math]::Round($_.Length/1KB, 1) + ' KB)') }"`;
@@ -196,7 +290,7 @@ function listRecentScreenshots() {
     });
 }
 
-// Simple app launcher
+// Simple app launcher - SAME AS BEFORE
 function launchSimpleApp(appName) {
     return new Promise((resolve) => {
         const apps = {
@@ -227,7 +321,7 @@ function launchSimpleApp(appName) {
     });
 }
 
-// Simple system info
+// Simple system info - SAME AS BEFORE
 function getSimpleSystemInfo() {
     return new Promise((resolve) => {
         const command = 'powershell -Command "Get-ComputerInfo | Select-Object WindowsProductName, @{Name=\\"Memory_GB\\";Expression={[math]::Round($_.TotalPhysicalMemory/1GB,1)}} | Format-List"';
@@ -242,7 +336,54 @@ function getSimpleSystemInfo() {
     });
 }
 
-// Extract app name from message
+// NEW FEATURE 2: Open new browser tab with project (SIMPLIFIED FOR TESTING)
+function openNewBrowserTab() {
+    return new Promise((resolve) => {
+        const projectUrl = 'http://localhost:3001';
+        
+        console.log('🔧 Attempting to open browser tab...');
+        
+        // Simple approach: try common browsers
+        const commands = [
+            `start chrome "${projectUrl}"`,
+            `start msedge "${projectUrl}"`,
+            `start "" "${projectUrl}"`
+        ];
+        
+        let attempt = 0;
+        
+        function tryNextCommand() {
+            if (attempt >= commands.length) {
+                resolve({ 
+                    success: false, 
+                    error: 'All browser attempts failed'
+                });
+                return;
+            }
+            
+            const command = commands[attempt];
+            console.log(`🔧 Trying command ${attempt + 1}: ${command}`);
+            
+            exec(command, (error, stdout, stderr) => {
+                if (error) {
+                    console.log(`❌ Command ${attempt + 1} failed: ${error.message}`);
+                    attempt++;
+                    tryNextCommand();
+                } else {
+                    console.log(`✅ Command ${attempt + 1} succeeded!`);
+                    const browserNames = ['Chrome', 'Edge', 'Default Browser'];
+                    resolve({ 
+                        success: true, 
+                        browser: browserNames[attempt],
+                        url: projectUrl
+                    });
+                }
+            });
+        }
+        
+        tryNextCommand();
+    });
+}
 function extractAppName(message) {
     const msg = message.toLowerCase();
     if (msg.includes('calculator')) return 'calculator';
@@ -264,17 +405,16 @@ function extractAppName(message) {
 app.get('/api/health', (req, res) => {
     res.json({
         status: 'ok',
-        server: 'Super Simple Server with WORKING Screenshots',
+        server: 'Back to Working Server',
         desktop_path: DESKTOP_PATH
     });
 });
 
 // Start server
 app.listen(PORT, () => {
-    console.log(`🚀 SUPER SIMPLE Server running on http://localhost:${PORT}`);
-    console.log(`📸 Screenshots will be saved to: ${DESKTOP_PATH}`);
-    console.log(`✅ Using temporary PowerShell scripts for reliability`);
-    console.log(`🔧 This version WILL work!`);
+    console.log(`🚀 BACK TO WORKING Server running on http://localhost:${PORT}`);
+    console.log(`📸 Screenshots: Desktop only, no folder opening`);
+    console.log(`✅ Back to basics that work!`);
 });
 
 process.on('SIGINT', () => {
