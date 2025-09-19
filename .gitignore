@@ -1,0 +1,34 @@
+# Node modules
+node_modules/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build output
+dist/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Misc
+*.swp
+*.swo
+
+# VS Code
+.vscode/
+
+# Coverage
+coverage/
+
+# Public
+public/*.tmp

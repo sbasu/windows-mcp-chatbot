@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Windows Assistant - Back to Working</title>
+    <title>Windows Assistant - Claude AI Enhanced</title>
     <style>
         * {
             margin: 0;
@@ -23,7 +23,7 @@
 
         .container {
             width: 100%;
-            max-width: 700px;
+            max-width: 950px;
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             border-radius: 15px;
@@ -32,20 +32,105 @@
         }
 
         .header {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
             color: white;
             padding: 20px;
             text-align: center;
+            position: relative;
         }
 
-        .header h1 {
-            font-size: 24px;
-            margin-bottom: 5px;
+        .ai-badge {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            background: rgba(255,255,255,0.2);
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
         }
 
-        .header p {
-            font-size: 14px;
-            opacity: 0.9;
+        .claude-status {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #dc3545;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.connected {
+            background: #28a745;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .api-config {
+            background: #fff3cd;
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+            display: none;
+        }
+
+        .api-config.show {
+            display: block;
+        }
+
+        .api-input {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .api-input input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+
+        .api-input button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.3s ease;
+        }
+
+        .api-input button:hover {
+            background: #0056b3;
+        }
+
+        .api-input button:last-child {
+            background: #28a745;
+        }
+
+        .api-input button:last-child:hover {
+            background: #1e7e34;
         }
 
         .messages-container {
@@ -61,11 +146,12 @@
 
         .message-content {
             display: inline-block;
-            max-width: 80%;
+            max-width: 90%;
             padding: 12px 16px;
             border-radius: 15px;
             font-size: 14px;
             line-height: 1.4;
+            white-space: pre-wrap;
         }
 
         .message.user {
@@ -84,18 +170,41 @@
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
         }
 
+        .ai-message .message-content {
+            border-left: 4px solid #ff6b6b;
+            background: linear-gradient(135deg, #fff5f5 0%, #ffe6e6 100%);
+        }
+
         .suggestions {
             padding: 15px 20px;
             background: white;
             border-top: 1px solid #eee;
         }
 
-        .suggestions-title {
-            font-size: 12px;
-            color: #666;
-            margin-bottom: 10px;
-            font-weight: 600;
+        .feature-section {
+            margin-bottom: 20px;
         }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-badge {
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            color: white;
+            font-weight: bold;
+        }
+
+        .status-badge.working { background: #28a745; }
+        .status-badge.ai { background: #ff6b6b; }
+        .status-badge.experimental { background: #ffc107; color: #333; }
 
         .suggestion-buttons {
             display: flex;
@@ -104,19 +213,35 @@
         }
 
         .suggestion {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            color: white;
             border: none;
-            padding: 8px 12px;
+            padding: 8px 15px;
             border-radius: 20px;
-            font-size: 11px;
+            font-size: 12px;
             cursor: pointer;
             transition: all 0.3s ease;
+            color: white;
+            font-weight: 500;
+        }
+
+        .suggestion.working {
+            background: linear-gradient(135deg, #43e97b 0%, #38d9a9 100%);
+        }
+
+        .suggestion.ai {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+        }
+
+        .suggestion.experimental {
+            background: linear-gradient(135deg, #ffc107 0%, #ff8f00 100%);
         }
 
         .suggestion:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(240, 147, 251, 0.3);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .suggestion:active {
+            transform: translateY(0);
         }
 
         .input-area {
@@ -137,12 +262,12 @@
         }
 
         .message-input:focus {
-            border-color: #4facfe;
-            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
+            border-color: #ff6b6b;
+            box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.1);
         }
 
         .send-button {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
             color: white;
             border: none;
             padding: 12px 20px;
@@ -155,7 +280,7 @@
 
         .send-button:hover:not(:disabled) {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(79, 172, 254, 0.3);
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
         }
 
         .send-button:disabled {
@@ -174,36 +299,92 @@
             font-size: 48px;
             margin-bottom: 20px;
         }
+
+        .loading {
+            opacity: 0.7;
+            animation: pulse 1s infinite;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🤖 Windows Assistant</h1>
-            <p>Back to Working Version - Simple & Reliable</p>
+            <div class="ai-badge">🤖 AI POWERED</div>
+            <h1>🚀 Windows Assistant - Claude Enhanced</h1>
+            <p>Intelligent automation with AI-generated content</p>
+        </div>
+
+        <div class="claude-status">
+            <div class="status-indicator">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">Claude API: Not configured</span>
+            </div>
+            <button onclick="toggleApiConfig()" style="background: #007bff; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 12px;">
+                ⚙️ Configure
+            </button>
+        </div>
+
+        <div class="api-config" id="apiConfig">
+            <div style="font-weight: 600; margin-bottom: 10px;">🔑 Claude API Configuration</div>
+            <div>Enter your Claude API key to enable AI-powered email and document generation:</div>
+            <div class="api-input">
+                <input type="password" id="apiKeyInput" placeholder="sk-ant-api03-..." />
+                <button onclick="configureClaudeAPI()">Save API Key</button>
+                <button onclick="checkClaudeStatus()">Test Connection</button>
+            </div>
+            <div style="font-size: 11px; color: #666; margin-top: 5px;">
+                Get your API key from: <a href="https://console.anthropic.com/" target="_blank" style="color: #007bff;">console.anthropic.com</a>
+            </div>
         </div>
         
         <div id="messages" class="messages-container">
             <div class="welcome-message">
-                <div class="welcome-icon">✅</div>
-                <h3>Back to Working!</h3>
-                <p>Simple, reliable Windows automation. Try the buttons below or type your request.</p>
+                <div class="welcome-icon">🤖</div>
+                <h3>AI-Enhanced Windows Automation</h3>
+                <p>Configure Claude API for intelligent email and document generation!</p>
             </div>
         </div>
 
         <div class="suggestions">
-            <div class="suggestions-title">💡 Working Commands</div>
-            <div class="suggestion-buttons">
-                <button class="suggestion" onclick="sendMessage('Write a poem in Word')">✍️ Write Poem</button>
-                <button class="suggestion" onclick="sendMessage('Write an essay in Word')">📝 Write Essay</button>
-                <button class="suggestion" onclick="sendMessage('Write letter to principal in Word')">💌 Write Letter</button>
-                <button class="suggestion" onclick="sendMessage('Take a screenshot')">📸 Desktop Screenshot</button>
-                <button class="suggestion" onclick="sendMessage('Screenshot of Chrome')">🌍 Chrome Window</button>
-                <button class="suggestion" onclick="sendMessage('Screenshot of active window')">🪟 Active Window</button>
-                <button class="suggestion" onclick="sendMessage('Show recent screenshots')">📁 Recent Screenshots</button>
-                <button class="suggestion" onclick="sendMessage('Open calculator')">🧮 Calculator</button>
-                <button class="suggestion" onclick="sendMessage('Open Word')">📄 Word</button>
-                <button class="suggestion" onclick="sendMessage('System info')">💻 System Info</button>
+            <div class="feature-section">
+                <div class="section-title">
+                    <span>🤖 AI-POWERED FEATURES</span>
+                    <span class="status-badge ai">CLAUDE API</span>
+                </div>
+                <div class="suggestion-buttons">
+                    <button class="suggestion ai" onclick="sendMessage('compose professional leave email from 16th Oct 2025 to 23rd Oct 2025 for Family vacation to rajendra.prasad@intglobal.com')">📧 Smart Leave Email</button>
+                    <button class="suggestion ai" onclick="sendMessage('compose meeting request email to team about project review')">🤝 Smart Meeting Email</button>
+                    <button class="suggestion ai" onclick="sendMessage('write professional letter to principal about student performance')">💌 AI Letter Generation</button>
+                    <button class="suggestion ai" onclick="sendMessage('help me write a follow-up email about the budget proposal')">🔄 Smart Follow-up</button>
+                    <button class="suggestion ai" onclick="sendMessage('claude help me with general assistance')">🧠 Ask Claude AI</button>
+                </div>
+            </div>
+
+            <div class="feature-section">
+                <div class="section-title">
+                    <span>✅ RELIABLE FEATURES</span>
+                    <span class="status-badge working">ALWAYS WORK</span>
+                </div>
+                <div class="suggestion-buttons">
+                    <button class="suggestion working" onclick="sendMessage('take screenshot')">📸 Desktop Screenshot</button>
+                    <button class="suggestion working" onclick="sendMessage('open calculator')">🧮 Calculator</button>
+                    <button class="suggestion working" onclick="sendMessage('open notepad')">📝 Notepad</button>
+                    <button class="suggestion working" onclick="sendMessage('system info')">💻 System Info</button>
+                    <button class="suggestion working" onclick="sendMessage('open cmd')">⚡ Command Prompt</button>
+                </div>
+            </div>
+
+            <div class="feature-section">
+                <div class="section-title">
+                    <span>⚠️ EXPERIMENTAL</span>
+                    <span class="status-badge experimental">FALLBACK</span>
+                </div>
+                <div class="suggestion-buttons">
+                    <button class="suggestion experimental" onclick="sendMessage('open outlook')">📬 Open Outlook</button>
+                    <button class="suggestion experimental" onclick="sendMessage('open word')">📄 Open Word</button>
+                    <button class="suggestion experimental" onclick="sendMessage('write basic letter template')">📝 Basic Templates</button>
+                    <button class="suggestion experimental" onclick="sendMessage('email template for general inquiry')">✉️ Email Templates</button>
+                </div>
             </div>
         </div>
 
@@ -211,7 +392,7 @@
             <input type="text" 
                    id="messageInput" 
                    class="message-input" 
-                   placeholder="Type your command..." 
+                   placeholder="Try: 'compose smart email about project deadline to manager@company.com'" 
                    onkeypress="if(event.key==='Enter') sendMessage()">
             <button id="sendButton" class="send-button" onclick="sendMessage()">Send</button>
         </div>
@@ -221,14 +402,19 @@
         const messagesContainer = document.getElementById('messages');
         const messageInput = document.getElementById('messageInput');
         const sendButton = document.getElementById('sendButton');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const apiConfig = document.getElementById('apiConfig');
 
-        function addMessage(content, isUser = false) {
+        let claudeConfigured = false;
+
+        function addMessage(content, isUser = false, isAI = false) {
             const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${isUser ? 'user' : 'bot'}`;
+            messageDiv.className = `message ${isUser ? 'user' : 'bot'} ${isAI ? 'ai-message' : ''}`;
             
             const contentDiv = document.createElement('div');
             contentDiv.className = 'message-content';
-            contentDiv.innerHTML = content;
+            contentDiv.textContent = isUser ? `You: ${content}` : content;
             
             messageDiv.appendChild(contentDiv);
             messagesContainer.appendChild(messageDiv);
@@ -240,10 +426,101 @@
             }
             
             scrollToBottom();
+            return messageDiv;
         }
 
         function scrollToBottom() {
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function toggleApiConfig() {
+            apiConfig.classList.toggle('show');
+            if (apiConfig.classList.contains('show')) {
+                document.getElementById('apiKeyInput').focus();
+            }
+        }
+
+        async function configureClaudeAPI() {
+            const apiKey = document.getElementById('apiKeyInput').value.trim();
+            
+            if (!apiKey) {
+                alert('Please enter your Claude API key');
+                return;
+            }
+
+            if (!apiKey.startsWith('sk-ant-')) {
+                alert('Invalid API key format. Claude API keys start with "sk-ant-"');
+                return;
+            }
+
+            const configButton = event.target;
+            const originalText = configButton.textContent;
+            configButton.textContent = 'Configuring...';
+            configButton.disabled = true;
+
+            try {
+                const response = await fetch('/api/configure-claude', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ apiKey })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    statusDot.classList.add('connected');
+                    statusText.textContent = 'Claude API: Connected and ready';
+                    claudeConfigured = true;
+                    apiConfig.classList.remove('show');
+                    document.getElementById('apiKeyInput').value = '';
+                    addMessage('✅ Claude API configured successfully! AI features now available.', false, true);
+                } else {
+                    alert(`Configuration failed: ${data.error}`);
+                }
+            } catch (error) {
+                alert(`Network error: ${error.message}`);
+            } finally {
+                configButton.textContent = originalText;
+                configButton.disabled = false;
+            }
+        }
+
+        async function checkClaudeStatus() {
+            const testButton = event.target;
+            const originalText = testButton.textContent;
+            testButton.textContent = 'Testing...';
+            testButton.disabled = true;
+
+            try {
+                const response = await fetch('/api/claude-status');
+                const data = await response.json();
+
+                if (data.success) {
+                    const status = data.status;
+                    if (status.configured) {
+                        statusDot.classList.add('connected');
+                        statusText.textContent = `Claude API: ${status.connection}`;
+                        claudeConfigured = true;
+                        addMessage(`🤖 Claude API Status Check:
+• Status: ${status.connection}
+• Model: ${status.model}
+• Max Tokens: ${status.maxTokens}
+• Configuration: ${status.configured ? 'Ready' : 'Not configured'}`, false, true);
+                    } else {
+                        statusDot.classList.remove('connected');
+                        statusText.textContent = 'Claude API: Not configured';
+                        claudeConfigured = false;
+                        addMessage('⚠️ Claude API not configured. Click "Configure" to set up AI features.', false, true);
+                    }
+                } else {
+                    addMessage(`❌ Status check failed: ${data.error}`);
+                }
+            } catch (error) {
+                addMessage(`❌ Status check failed: ${error.message}`);
+            } finally {
+                testButton.textContent = originalText;
+                testButton.disabled = false;
+            }
         }
 
         async function sendMessage(text = null) {
@@ -253,10 +530,30 @@
             if (!text) messageInput.value = '';
             sendButton.disabled = true;
             
-            addMessage(`<strong>You:</strong> ${message}`, true);
+            addMessage(message, true);
+            
+            // Show appropriate loading message with animation
+            let loadingMessage;
+            if (message.toLowerCase().includes('compose') || message.toLowerCase().includes('smart') || message.toLowerCase().includes('write')) {
+                if (claudeConfigured) {
+                    loadingMessage = addMessage('🤖 Generating AI content with Claude... (This may take 5-10 seconds)', false, true);
+                } else {
+                    loadingMessage = addMessage('⚠️ Using basic templates (Claude API not configured)');
+                }
+            } else if (message.toLowerCase().includes('screenshot')) {
+                loadingMessage = addMessage('📸 Taking screenshot... (Should work)');
+            } else if (message.toLowerCase().includes('open')) {
+                loadingMessage = addMessage('🚀 Launching application...');
+            } else if (message.toLowerCase().includes('claude') || message.toLowerCase().includes('help')) {
+                loadingMessage = addMessage('🧠 Processing with Claude AI...', false, true);
+            }
+            
+            if (loadingMessage) {
+                loadingMessage.classList.add('loading');
+            }
             
             try {
-                const response = await fetch('http://localhost:3001/api/chat', {
+                const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ message })
@@ -268,30 +565,129 @@
                 
                 const data = await response.json();
                 
+                // Remove loading message
+                if (loadingMessage) {
+                    loadingMessage.remove();
+                }
+                
                 if (data.success) {
-                    let responseHtml = `<strong>Assistant:</strong> ${data.response}`;
+                    let responseText = `${data.response}`;
                     if (data.details) {
-                        responseHtml += `<br><small><em>${data.details}</em></small>`;
+                        responseText += `\n\n${data.details}`;
                     }
-                    addMessage(responseHtml);
+                    
+                    const isAIResponse = responseText.includes('Claude AI') || responseText.includes('🤖') || 
+                                        responseText.includes('Generated by Claude') || 
+                                        message.toLowerCase().includes('claude') ||
+                                        message.toLowerCase().includes('smart') ||
+                                        message.toLowerCase().includes('compose');
+                    
+                    addMessage(responseText, false, isAIResponse);
                 } else {
-                    addMessage(`<strong>Error:</strong> ${data.error || 'Unknown error'}`);
+                    addMessage(`❌ Error: ${data.error || 'Unknown error'}`);
                 }
                 
             } catch (error) {
+                // Remove loading message on error
+                if (loadingMessage) {
+                    loadingMessage.remove();
+                }
+                
                 if (error.message.includes('Failed to fetch')) {
-                    addMessage('<strong>🔌 Connection Error:</strong> Server not running. Make sure to start: node server.js');
+                    addMessage(`🔌 Connection Error: Server not running
+
+Please start the server:
+1. Open Command Prompt in project folder
+2. Run: node server.js
+3. Make sure all modules are created
+
+Expected files:
+• server.js (main server)
+• modules/claude.js (Claude API integration)
+• modules/email.js (enhanced email module)
+• modules/screenshot.js (working)
+• modules/appLauncher.js (working)
+• modules/systemInfo.js (working)`);
                 } else {
-                    addMessage(`<strong>❌ Error:</strong> ${error.message}`);
+                    addMessage(`❌ Network Error: ${error.message}`);
                 }
             }
             
             sendButton.disabled = false;
         }
 
-        // Focus input on page load
+        // Initialize
         window.addEventListener('load', () => {
             messageInput.focus();
+            checkClaudeStatus();
+            
+            // Show usage tips after a delay
+            setTimeout(() => {
+                if (document.querySelector('.welcome-message')) {
+                    addMessage(`🚀 CLAUDE AI ENHANCED WINDOWS ASSISTANT
+
+✅ WORKING WITHOUT API:
+• Screenshots → Desktop PNG files
+• Calculator, Notepad → Instant launch
+• System Info → Computer details
+• Basic email templates
+
+🤖 ENHANCED WITH CLAUDE API:
+• Intelligent email composition
+• Context-aware responses
+• Professional language generation
+• Adaptive content for different purposes
+
+🔑 TO UNLOCK AI FEATURES:
+1. Get API key from console.anthropic.com
+2. Click "⚙️ Configure" above
+3. Enter your API key and save
+4. Try AI-powered commands!
+
+💡 EXAMPLE COMMANDS:
+• "compose professional email about project delay to manager@company.com"
+• "write formal letter to principal about student absence"
+• "help me draft a meeting request for next week"
+• "claude, assist me with writing a follow-up email"
+
+🎯 YOUR EXACT USE CASE:
+The "📧 Smart Leave Email" button will create an intelligent, professional leave application with your specific details!`, false, true);
+                }
+            }, 3000);
+        });
+
+        // Enhanced input handling
+        messageInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // Smart placeholder updates
+        messageInput.addEventListener('input', function() {
+            const value = this.value.toLowerCase();
+            
+            if (value.includes('email') || value.includes('compose')) {
+                this.placeholder = claudeConfigured ? 
+                    '✨ AI will generate smart, contextual email content...' :
+                    '📝 Will create basic template (configure Claude API for AI content)';
+            } else if (value.includes('write') || value.includes('letter')) {
+                this.placeholder = claudeConfigured ? 
+                    '✨ AI will create professional documents...' :
+                    '📝 Will create basic template (configure Claude API for AI content)';
+            } else if (value.includes('claude') || value.includes('help')) {
+                this.placeholder = '🤖 Claude AI will provide intelligent assistance...';
+            } else {
+                this.placeholder = 'Try AI-powered features or reliable system commands...';
+            }
+        });
+
+        // Add Enter key support for API configuration
+        document.getElementById('apiKeyInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                configureClaudeAPI();
+            }
         });
     </script>
 </body>

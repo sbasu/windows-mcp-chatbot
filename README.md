@@ -10,13 +10,11 @@ windows-mcp-chatbot/
 ├── public/
 │   └── index.html         ← Copy from "index.html" artifact
 └── README.md              ← This file
-```
 
 ## 🚀 Quick Setup Steps
 
 ### 1. Create Project Folder
 - Create folder: `C:\Users\[YourName]\Desktop\windows-mcp-chatbot`
-- Create subfolder: `public`
 
 ### 2. Copy Files
 - Copy **package.json** artifact content → save as `package.json`
@@ -33,18 +31,10 @@ Open Command Prompt or PowerShell in project folder:
 ```bash
 cd "C:\Users\[YourName]\Desktop\windows-mcp-chatbot"
 npm install
-```
-
 ### 5. Start Server
 ```bash
-node server.js
-```
-
 You should see:
 ```
-🚀 MCP Bridge Server running on http://localhost:3001
-📡 Ready to process Windows automation requests
-🔧 MCP integration: SIMULATION MODE
 ```
 
 ### 6. Test the Chatbot
@@ -66,9 +56,7 @@ You should see:
 - ✅ Professional UI with animations
 
 ### Simulated Commands:
-- 📸 **Screenshots**: "Take a screenshot"
-- 🚀 **App Launching**: "Open calculator", "Launch notepad"
-- 💻 **System Info**: "Show system info", "Computer specs"
+-  **System Info**: "Show system info", "Computer specs"
 - 💾 **Disk Space**: "Check disk space", "Show storage"
 - 📱 **Running Apps**: "List running apps", "What's open"
 - 🔌 **Connection Test**: "Test connection"
@@ -76,16 +64,6 @@ You should see:
 ## 🔄 Next Steps (Real MCP Integration)
 
 Once the basic version is working, we can:
-
-1. **Connect Real MCP**: Replace simulation with actual MCP Windows agent calls
-2. **Add More Features**: File operations, system monitoring, etc.
-3. **Enhance UI**: Voice input, file uploads, drag & drop
-4. **Deploy**: Make accessible from other devices
-
-## 🛠️ Troubleshooting
-
-### "node is not recognized"
-- Install Node.js from nodejs.org
 - Restart terminal/command prompt
 - Try: `node --version`
 
@@ -101,7 +79,6 @@ Once the basic version is working, we can:
 
 ## 🎯 Testing Checklist
 
-- [ ] Node.js installed and working
 - [ ] All 3 files created in correct locations
 - [ ] `npm install` completed successfully
 - [ ] Server starts without errors
