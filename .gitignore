@@ -23,6 +23,7 @@ dist/
 # Misc
 *.swp
 *.swo
+*.md
 
 # VS Code
 .vscode/

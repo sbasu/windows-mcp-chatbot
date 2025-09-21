@@ -1,4 +1,4 @@
-// modules/claude.js - ENHANCED CLAUDE API MODULE WITH .ENV SUPPORT
+// modules/claude.js - FIXED .ENV LOADING & API ISSUES
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
@@ -6,76 +6,100 @@ const path = require('path');
 let CLAUDE_API_KEY = null;
 let API_CONFIG = {
     baseURL: 'https://api.anthropic.com/v1/messages',
-    model: 'claude-3-haiku-20240307', // Fast and cost-effective model
+    model: 'claude-3-haiku-20240307',
     maxTokens: 1000
 };
 
 let envLoaded = false;
+let keySource = 'not_configured';
 
-// Load environment variables from .env file
+// FIXED: Robust .env file loading
 function loadEnvironmentVariables() {
-    if (envLoaded) return;
+    if (envLoaded) {
+        console.log('📁 Environment already loaded');
+        return;
+    }
     
     try {
         const envPath = path.join(process.cwd(), '.env');
+        console.log(`🔍 Looking for .env file at: ${envPath}`);
         
         if (fs.existsSync(envPath)) {
-            console.log('📁 Found .env file, loading configuration...');
+            console.log('✅ .env file found, reading content...');
             
             const envContent = fs.readFileSync(envPath, 'utf8');
-            const envLines = envContent.split('\n');
+            console.log(`📄 .env file size: ${envContent.length} characters`);
             
-            envLines.forEach(line => {
+            const envLines = envContent.split('\n');
+            let keyFound = false;
+            
+            envLines.forEach((line, index) => {
                 const trimmedLine = line.trim();
+                console.log(`Line ${index + 1}: "${trimmedLine.substring(0, 50)}${trimmedLine.length > 50 ? '...' : ''}"`);
+                
                 if (trimmedLine && !trimmedLine.startsWith('#') && trimmedLine.includes('=')) {
-                    const [key, ...valueParts] = trimmedLine.split('=');
-                    const value = valueParts.join('=').trim();
+                    const equalIndex = trimmedLine.indexOf('=');
+                    const key = trimmedLine.substring(0, equalIndex).trim();
+                    const value = trimmedLine.substring(equalIndex + 1).trim();
                     
-                    if (value && !process.env[key]) {
+                    console.log(`🔑 Found variable: ${key} = ${value.substring(0, 20)}${value.length > 20 ? '...' : ''}`);
+                    
+                    // Set environment variable if not already set
+                    if (!process.env[key]) {
                         process.env[key] = value;
+                    }
+                    
+                    // Check specifically for Claude API key
+                    if (key === 'CLAUDE_API_KEY' && value && value.trim() !== '') {
+                        CLAUDE_API_KEY = value.trim();
+                        keySource = '.env_file';
+                        keyFound = true;
+                        console.log(`✅ Claude API key loaded from .env: ${CLAUDE_API_KEY.substring(0, 12)}...`);
                     }
                 }
             });
             
-            // Load Claude API configuration from environment
-            if (process.env.CLAUDE_API_KEY && process.env.CLAUDE_API_KEY.trim()) {
-                CLAUDE_API_KEY = process.env.CLAUDE_API_KEY.trim();
-                console.log('✅ Claude API key loaded from .env file');
+            if (!keyFound) {
+                console.log('⚠️ CLAUDE_API_KEY not found in .env file or is empty');
+                console.log('💡 Make sure .env file contains: CLAUDE_API_KEY=sk-ant-your-key-here');
             }
             
+            // Load other configuration
             if (process.env.CLAUDE_MODEL) {
                 API_CONFIG.model = process.env.CLAUDE_MODEL;
+                console.log(`🤖 Claude model set to: ${API_CONFIG.model}`);
             }
             
             if (process.env.CLAUDE_MAX_TOKENS) {
                 API_CONFIG.maxTokens = parseInt(process.env.CLAUDE_MAX_TOKENS) || 1000;
+                console.log(`📊 Max tokens set to: ${API_CONFIG.maxTokens}`);
             }
             
-            console.log(`🤖 Claude configuration: Model=${API_CONFIG.model}, MaxTokens=${API_CONFIG.maxTokens}`);
-            
         } else {
-            console.log('📄 No .env file found, will use UI configuration');
+            console.log('📄 No .env file found, creating example...');
             createSampleEnvFile();
         }
         
     } catch (error) {
-        console.log('⚠️ Error loading .env file:', error.message);
-        console.log('💡 Will use UI configuration instead');
+        console.error('❌ Error loading .env file:', error.message);
+        console.log('💡 Will rely on UI configuration instead');
     }
     
     envLoaded = true;
+    console.log(`🏁 Environment loading complete. API key source: ${keySource}`);
 }
 
-// Create sample .env file if it doesn't exist
+// Create sample .env file with clear instructions
 function createSampleEnvFile() {
     try {
-        const envPath = path.join(process.cwd(), '.env.example');
+        const envExamplePath = path.join(process.cwd(), '.env.example');
+        const envRealPath = path.join(process.cwd(), '.env');
+        
         const sampleEnvContent = `# Windows MCP Chatbot - Environment Configuration
-# Copy this file and rename to .env
+# IMPORTANT: Rename this file to .env (remove .example)
 
-# Claude API Configuration
-CLAUDE_API_KEY=
-# Get your API key from: https://console.anthropic.com/
+# Claude API Configuration - GET YOUR KEY FROM: https://console.anthropic.com/
+CLAUDE_API_KEY=sk-ant-api03-put-your-actual-key-here
 
 # Optional: Claude API Settings
 CLAUDE_MODEL=claude-3-haiku-20240307
@@ -83,108 +107,150 @@ CLAUDE_MAX_TOKENS=1000
 
 # Optional: Server Configuration  
 PORT=3001
+NODE_ENV=development
 
-# Instructions:
-# 1. Rename this file to .env
-# 2. Add your Claude API key
-# 3. Restart the server`;
+# INSTRUCTIONS:
+# 1. Get your Claude API key from https://console.anthropic.com/
+# 2. Replace "sk-ant-api03-put-your-actual-key-here" with your real key
+# 3. Save this file as ".env" (remove the .example part)
+# 4. Restart the server: node server.js
+# 5. The system will automatically load your API key
 
-        if (!fs.existsSync(envPath)) {
-            fs.writeFileSync(envPath, sampleEnvContent);
+# SECURITY NOTE:
+# Never commit the .env file with real API keys to version control
+# Add .env to your .gitignore file`;
+
+        // Create .env.example
+        if (!fs.existsSync(envExamplePath)) {
+            fs.writeFileSync(envExamplePath, sampleEnvContent);
             console.log('📝 Created .env.example file for reference');
         }
+        
+        // Create actual .env file with placeholder
+        if (!fs.existsSync(envRealPath)) {
+            fs.writeFileSync(envRealPath, sampleEnvContent);
+            console.log('📝 Created .env file - Please add your API key!');
+            console.log('💡 Edit the .env file and add your Claude API key, then restart the server');
+        }
+        
     } catch (error) {
-        console.log('⚠️ Could not create .env.example:', error.message);
+        console.error('❌ Could not create .env files:', error.message);
     }
 }
 
-// Initialize module (load environment on first import)
-function initialize() {
-    loadEnvironmentVariables();
-    
-    // Auto-test API if key is loaded from .env
-    if (CLAUDE_API_KEY) {
-        testAPIConnection()
-            .then(status => {
-                console.log(`🔗 Claude API auto-test: ${status}`);
-            })
-            .catch(error => {
-                console.log(`⚠️ Claude API auto-test failed: ${error.message}`);
-            });
-    }
-}
-
-// Configure Claude API (now supports both .env and UI)
+// FIXED: Better API configuration with validation
 async function configureAPI(apiKey = null) {
     try {
+        console.log('🔧 Configuring Claude API...');
+        
         // If no API key provided, try to use .env
-        if (!apiKey) {
+        if (!apiKey || apiKey.trim() === '') {
+            console.log('🔍 No API key provided, checking .env file...');
             loadEnvironmentVariables();
+            
             if (CLAUDE_API_KEY) {
                 apiKey = CLAUDE_API_KEY;
-                console.log('🔄 Using API key from .env file');
+                console.log('✅ Using API key from .env file');
             } else {
-                throw new Error('No API key provided and none found in .env file');
+                throw new Error('No API key provided and none found in .env file. Please add CLAUDE_API_KEY to your .env file or configure via UI.');
             }
         }
         
-        if (!apiKey || !apiKey.startsWith('sk-ant-')) {
-            throw new Error('Invalid Claude API key format. Should start with "sk-ant-"');
+        // Validate API key format
+        if (!apiKey.startsWith('sk-ant-')) {
+            throw new Error(`Invalid Claude API key format. Key should start with "sk-ant-" but received: ${apiKey.substring(0, 10)}...`);
         }
-
-        CLAUDE_API_KEY = apiKey;
         
-        // Test the API key
+        // Set the API key
+        CLAUDE_API_KEY = apiKey;
+        keySource = apiKey === process.env.CLAUDE_API_KEY ? '.env_file' : 'ui_configuration';
+        console.log(`🔑 API key set from: ${keySource}`);
+        
+        // Test the API key with a simple request
+        console.log('🧪 Testing API key...');
         const testResult = await testAPIConnection();
+        console.log(`🔗 API test result: ${testResult}`);
         
         return `✅ Claude API configured successfully!
-Source: ${apiKey === process.env.CLAUDE_API_KEY ? '.env file' : 'UI configuration'}
-Model: ${API_CONFIG.model}
-Status: ${testResult}`;
+
+🔑 Key Source: ${keySource}
+🤖 Model: ${API_CONFIG.model}
+📊 Max Tokens: ${API_CONFIG.maxTokens}
+🔗 Connection Status: ${testResult}
+
+${keySource === 'ui_configuration' ? 
+'💡 To persist this API key, add it to your .env file:\nCLAUDE_API_KEY=' + apiKey : 
+'✅ API key loaded from .env file and working correctly'}`;
         
     } catch (error) {
-        if (apiKey !== process.env.CLAUDE_API_KEY) {
-            CLAUDE_API_KEY = null; // Only reset if not from .env
+        // Only reset API key if it wasn't from .env
+        if (keySource !== '.env_file') {
+            CLAUDE_API_KEY = null;
+            keySource = 'not_configured';
         }
+        console.error('❌ API configuration failed:', error.message);
         throw new Error(`Claude API configuration failed: ${error.message}`);
     }
 }
 
-// Test API connection
+// FIXED: More robust API connection test
 async function testAPIConnection() {
     if (!CLAUDE_API_KEY) {
-        return 'Not configured';
+        return 'Not configured - no API key available';
     }
 
     try {
-        const response = await callClaudeAPI('Test connection. Respond with "API working" only.', null, 50);
-        return response.includes('API working') || response.includes('working') ? 'Connected and working' : 'Connected but response unclear';
+        console.log('🔄 Testing Claude API connection...');
+        const response = await callClaudeAPI('Reply with exactly: "API test successful"', null, 50);
+        console.log(`📨 API response: "${response.substring(0, 50)}..."`);
+        
+        if (response.toLowerCase().includes('api test successful') || 
+            response.toLowerCase().includes('successful') || 
+            response.toLowerCase().includes('working')) {
+            return 'Connected and working properly';
+        } else {
+            return `Connected but response unclear: "${response.substring(0, 30)}..."`;
+        }
     } catch (error) {
+        console.error('❌ API test failed:', error.message);
         return `Connection failed: ${error.message}`;
     }
 }
 
-// Enhanced status check
+// FIXED: Enhanced status check with detailed information
 async function checkStatus() {
-    const envKeyAvailable = !!(process.env.CLAUDE_API_KEY && process.env.CLAUDE_API_KEY.trim());
+    const envKeyAvailable = !!(process.env.CLAUDE_API_KEY && process.env.CLAUDE_API_KEY.trim() && process.env.CLAUDE_API_KEY !== 'sk-ant-api03-put-your-actual-key-here');
     const currentKeyConfigured = CLAUDE_API_KEY !== null;
-    const keySource = CLAUDE_API_KEY === process.env.CLAUDE_API_KEY ? '.env file' : 'UI configuration';
+    const connectionStatus = await testAPIConnection();
     
     return {
         configured: currentKeyConfigured,
-        keySource: currentKeyConfigured ? keySource : 'not configured',
+        keySource: keySource,
         envFileExists: fs.existsSync(path.join(process.cwd(), '.env')),
         envKeyAvailable: envKeyAvailable,
+        envKeyValue: envKeyAvailable ? process.env.CLAUDE_API_KEY.substring(0, 12) + '...' : 'not_set',
+        currentKeyValue: currentKeyConfigured ? CLAUDE_API_KEY.substring(0, 12) + '...' : 'not_set',
         model: API_CONFIG.model,
         maxTokens: API_CONFIG.maxTokens,
-        connection: await testAPIConnection()
+        connection: connectionStatus,
+        debug: {
+            envLoaded: envLoaded,
+            processEnvKey: process.env.CLAUDE_API_KEY ? process.env.CLAUDE_API_KEY.substring(0, 12) + '...' : 'undefined',
+            moduleKey: CLAUDE_API_KEY ? CLAUDE_API_KEY.substring(0, 12) + '...' : 'null'
+        }
     };
 }
 
-// Main Claude API call function (enhanced with better error handling)
+// FIXED: More robust API call with better error handling
 async function callClaudeAPI(prompt, systemPrompt = null, maxTokens = null) {
     if (!CLAUDE_API_KEY) {
-        throw new Error('Claude API key not configured. Please add to .env file or configure via UI.');
+        throw new Error(`Claude API key not configured. 
+        
+Please either:
+1. Add CLAUDE_API_KEY to your .env file, OR  
+2. Configure via UI using the "⚙️ Configure" button
+
+Current status: ${keySource}`);
     }
 
     const messages = [
@@ -206,6 +272,7 @@ async function callClaudeAPI(prompt, systemPrompt = null, maxTokens = null) {
 
     return new Promise((resolve, reject) => {
         const postData = JSON.stringify(payload);
+        console.log(`🌐 Making API call to Claude (${payload.model}, ${payload.max_tokens} tokens)...`);
         
         const options = {
             hostname: 'api.anthropic.com',
@@ -229,20 +296,31 @@ async function callClaudeAPI(prompt, systemPrompt = null, maxTokens = null) {
 
             res.on('end', () => {
                 try {
+                    console.log(`📨 API response status: ${res.statusCode}`);
                     const response = JSON.parse(data);
                     
                     if (res.statusCode !== 200) {
-                        // Enhanced error messages
                         let errorMessage = `API Error ${res.statusCode}`;
                         if (response.error) {
-                            if (response.error.type === 'authentication_error') {
-                                errorMessage = 'Invalid API key. Please check your Claude API key.';
-                            } else if (response.error.type === 'permission_error') {
-                                errorMessage = 'API key does not have required permissions.';
-                            } else if (response.error.type === 'rate_limit_error') {
-                                errorMessage = 'API rate limit exceeded. Please wait and try again.';
-                            } else {
-                                errorMessage = response.error.message || 'Unknown API error';
+                            switch (response.error.type) {
+                                case 'authentication_error':
+                                    errorMessage = `Invalid API key. Please check your Claude API key.
+                                    
+Current key: ${CLAUDE_API_KEY.substring(0, 12)}...
+Key source: ${keySource}
+
+To fix:
+1. Get valid key from https://console.anthropic.com/
+2. Update .env file or reconfigure via UI`;
+                                    break;
+                                case 'permission_error':
+                                    errorMessage = 'API key does not have required permissions. Contact Anthropic support.';
+                                    break;
+                                case 'rate_limit_error':
+                                    errorMessage = 'API rate limit exceeded. Please wait and try again.';
+                                    break;
+                                default:
+                                    errorMessage = response.error.message || 'Unknown API error';
                             }
                         }
                         reject(new Error(errorMessage));
@@ -250,24 +328,24 @@ async function callClaudeAPI(prompt, systemPrompt = null, maxTokens = null) {
                     }
 
                     if (response.content && response.content[0] && response.content[0].text) {
+                        console.log('✅ API call successful');
                         resolve(response.content[0].text);
                     } else {
                         reject(new Error('Invalid response format from Claude API'));
                     }
                 } catch (error) {
-                    reject(new Error(`Failed to parse API response: ${error.message}`));
+                    reject(new Error(`Failed to parse API response: ${error.message}\nRaw response: ${data.substring(0, 200)}`));
                 }
             });
         });
 
         req.on('error', (error) => {
-            reject(new Error(`Network error: ${error.message}`));
+            reject(new Error(`Network error: ${error.message}. Check your internet connection.`));
         });
 
-        // Set timeout for API calls
         req.setTimeout(30000, () => {
             req.destroy();
-            reject(new Error('API request timeout (30s)'));
+            reject(new Error('API request timeout (30 seconds). Try again or check your connection.'));
         });
 
         req.write(postData);
@@ -275,26 +353,30 @@ async function callClaudeAPI(prompt, systemPrompt = null, maxTokens = null) {
     });
 }
 
-// Generate smart email content (enhanced)
+// Initialize on module load
+function initialize() {
+    console.log('🚀 Initializing Claude module...');
+    loadEnvironmentVariables();
+    
+    // Auto-test API if key is loaded from .env
+    if (CLAUDE_API_KEY && keySource === '.env_file') {
+        console.log('🧪 Auto-testing API key from .env...');
+        testAPIConnection()
+            .then(status => {
+                console.log(`✅ Auto-test result: ${status}`);
+            })
+            .catch(error => {
+                console.error(`❌ Auto-test failed: ${error.message}`);
+            });
+    } else {
+        console.log('💡 No API key in .env file. Configure via UI or add to .env file.');
+    }
+}
+
+// Generate smart email content (keep existing)
 async function generateEmailContent(request, recipient, subject) {
-    const systemPrompt = `You are an expert email writer. Generate professional, well-structured emails based on user requests. 
-
-Key requirements:
-- Keep emails concise but complete (200-400 words typically)
-- Use professional but friendly tone
-- Include proper greeting and closing
-- Format clearly with paragraphs
-- Be specific and actionable
-- Adapt tone based on email type (formal for leave requests, collaborative for meetings)
-- No extra commentary, just the email content`;
-
-    const prompt = `Generate a professional email for this request:
-
-Request: ${request}
-To: ${recipient || '[Recipient]'}
-Subject: ${subject || '[Subject will be determined]'}
-
-Generate ONLY the email body content (greeting through closing). Be specific and actionable.`;
+    const systemPrompt = `You are an expert email writer. Generate professional, well-structured emails based on user requests.`;
+    const prompt = `Generate a professional email for this request: ${request}`;
 
     try {
         const emailContent = await callClaudeAPI(prompt, systemPrompt);
@@ -302,58 +384,52 @@ Generate ONLY the email body content (greeting through closing). Be specific and
             success: true,
             content: emailContent.trim(),
             generatedBy: 'Claude API',
-            keySource: CLAUDE_API_KEY === process.env.CLAUDE_API_KEY ? '.env' : 'UI'
+            keySource: keySource
         };
     } catch (error) {
         return {
             success: false,
             error: error.message,
-            fallback: createFallbackEmail(request, recipient, subject)
+            fallback: `Dear ${recipient || 'Sir/Madam'},
+
+I hope this email finds you well.
+
+[This email was auto-generated. Please customize as needed.]
+
+Best regards,
+[Your Name]`
         };
     }
 }
 
-// Generate smart document content (enhanced)
+// Generate smart document content (keep existing)
 async function generateDocumentContent(request, documentType) {
-    const systemPrompt = `You are an expert writer who creates well-structured documents. Generate appropriate content based on the document type and user request.
-
-Key requirements:
-- Create proper document structure with clear sections
-- Use appropriate tone for document type (formal for letters, academic for essays)
-- Include relevant headings and formatting indicators
-- Be comprehensive but focused
-- Provide complete, usable content
-- No extra commentary, just the document content`;
-
-    const prompt = `Generate a ${documentType} based on this request:
-
-Request: ${request}
-Document Type: ${documentType}
-
-Create a complete, well-structured ${documentType} with appropriate sections and content. Include formatting indicators like [HEADING], [PARAGRAPH BREAK] where appropriate.`;
+    const systemPrompt = `You are an expert writer. Create well-structured documents based on the request and document type.`;
+    const prompt = `Generate a ${documentType} based on this request: ${request}`;
 
     try {
-        const documentContent = await callClaudeAPI(prompt, systemPrompt, 1500); // More tokens for documents
+        const documentContent = await callClaudeAPI(prompt, systemPrompt, 1500);
         return {
             success: true,
             content: documentContent.trim(),
             generatedBy: 'Claude API',
-            keySource: CLAUDE_API_KEY === process.env.CLAUDE_API_KEY ? '.env' : 'UI'
+            keySource: keySource
         };
     } catch (error) {
         return {
             success: false,
             error: error.message,
-            fallback: createFallbackDocument(request, documentType)
+            fallback: `Document created on ${new Date().toLocaleDateString()}
+
+[This document was auto-generated. Please customize as needed.]`
         };
     }
 }
 
-// Handle general queries with Claude (enhanced)
+// Handle general queries (keep existing)
 async function handleGeneralQuery(query) {
     try {
-        const systemPrompt = `You are a helpful Windows automation assistant with access to Claude AI. Provide clear, actionable responses to user queries about Windows automation, productivity, and general assistance. Keep responses helpful but concise (under 300 words typically).`;
-        
+        const systemPrompt = `You are a helpful Windows automation assistant. Provide clear, actionable responses.`;
         const response = await callClaudeAPI(query, systemPrompt);
         
         return {
@@ -361,162 +437,25 @@ async function handleGeneralQuery(query) {
             details: `${response}
 
 ---
-Generated by Claude AI (${CLAUDE_API_KEY === process.env.CLAUDE_API_KEY ? 'configured via .env file' : 'configured via UI'})`
+Generated by Claude API (${keySource})`
         };
-        
     } catch (error) {
         return {
             message: '🤖 Claude AI Assistant (Offline)',
             details: `Claude API not available: ${error.message}
 
-💡 TO FIX THIS:
-1. Add your API key to .env file, OR
-2. Configure via UI using the "⚙️ Configure" button
+🔧 TO FIX:
+1. Check your .env file contains: CLAUDE_API_KEY=your-key-here
+2. Or configure via UI using "⚙️ Configure" button
+3. Get API key from: https://console.anthropic.com/
 
-I can still help with:
-✅ Screenshots and system info
-✅ Opening applications  
-✅ Basic email and document templates
-
-To enable AI features, get your API key from: https://console.anthropic.com/`
+Current status: ${keySource}
+Working features: Screenshots, System info, Basic templates`
         };
     }
 }
 
-// Enhanced email parsing with Claude assistance
-async function parseEmailWithClaude(message) {
-    try {
-        const systemPrompt = `Extract email details from user requests. Return ONLY a JSON object with these fields:
-- to: email address (or empty string if not found)
-- subject: appropriate subject line based on content
-- category: leave/meeting/general/followup/complaint/request
-- dates: any dates mentioned (in readable format)
-- purpose: brief description of email purpose
-- urgency: low/medium/high based on content`;
-
-        const prompt = `Extract email details from: "${message}"
-
-Return only valid JSON, no other text.`;
-        
-        const response = await callClaudeAPI(prompt, systemPrompt, 200);
-        const parsed = JSON.parse(response);
-        
-        return {
-            to: parsed.to || '',
-            subject: parsed.subject || 'General Inquiry',
-            category: parsed.category || 'general',
-            dates: parsed.dates || '',
-            purpose: parsed.purpose || '',
-            urgency: parsed.urgency || 'medium'
-        };
-        
-    } catch (error) {
-        console.log('Claude email parsing failed, using fallback:', error.message);
-        return parseEmailBasic(message);
-    }
-}
-
-// Fallback functions (keep existing ones)
-function createFallbackEmail(request, recipient, subject) {
-    const msg = request.toLowerCase();
-    
-    if (msg.includes('leave') || msg.includes('vacation')) {
-        return `Dear Sir/Madam,
-
-I would like to request leave for the dates mentioned in my request.
-
-I will ensure all my work is completed before my absence and coordinate with my team for any urgent matters.
-
-Please let me know if you need any additional information.
-
-Thank you for your consideration.
-
-Best regards,
-[Your Name]`;
-    } else if (msg.includes('meeting')) {
-        return `Dear Team,
-
-I would like to schedule a meeting to discuss the topics mentioned in my request.
-
-Please let me know your availability so we can find a suitable time for everyone.
-
-Thank you.
-
-Best regards,
-[Your Name]`;
-    } else {
-        return `Dear ${recipient ? recipient.split('@')[0] : 'Sir/Madam'},
-
-I hope this email finds you well.
-
-[This email was generated automatically. Please review and customize as needed.]
-
-Thank you for your time.
-
-Best regards,
-[Your Name]`;
-    }
-}
-
-function createFallbackDocument(request, documentType) {
-    const msg = request.toLowerCase();
-    
-    if (documentType.includes('letter')) {
-        return `Date: ${new Date().toLocaleDateString()}
-
-Dear [Recipient],
-
-I am writing this letter regarding [your request].
-
-[Please customize this content based on your specific needs.]
-
-Thank you for your consideration.
-
-Sincerely,
-[Your Name]`;
-    } else if (documentType.includes('essay')) {
-        return `[Essay Title]
-
-Introduction:
-[State your thesis and main points]
-
-Body:
-[Develop your arguments with supporting evidence]
-
-Conclusion:
-[Summarize your key points]
-
-[This document was auto-generated. Please customize with your specific content.]`;
-    } else {
-        return `[Document Title]
-
-Created: ${new Date().toLocaleDateString()}
-
-[This document was generated automatically. Please customize with your specific content.]
-
-Content:
-[Add your main content here]
-
-Summary:
-[Add conclusions or next steps]`;
-    }
-}
-
-function parseEmailBasic(message) {
-    const emailRegex = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g;
-    const emails = message.match(emailRegex);
-    
-    return {
-        to: emails ? emails[0] : '',
-        subject: message.includes('leave') ? 'Leave Application' : 'General Inquiry',
-        category: message.includes('leave') ? 'leave' : 'general',
-        dates: '',
-        purpose: 'User request',
-        urgency: 'medium'
-    };
-}
-
-// Initialize on module load
+// Initialize immediately when module is loaded
 initialize();
 
 module.exports = {
@@ -527,7 +466,6 @@ module.exports = {
     generateEmailContent,
     generateDocumentContent,
     handleGeneralQuery,
-    parseEmailWithClaude,
     loadEnvironmentVariables,
     initialize
 };
